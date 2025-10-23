@@ -1,8 +1,8 @@
 using './main.bicep'
 
-param namePrefix = 'privds01'
+param namePrefix = 'privds02'
 
-param workspaceName = 'synapsews-dev-001'
+param workspaceName = 'synapsews-dev-002'
 @secure()
 param sqlAdminPassword = 'ChangeMe-Strong!1'  // better: pass via CLI or KeyVault
 param initialWorkspaceAdminObjectId = '7180c691-8b70-496f-bb11-e019e5bf64f8'
