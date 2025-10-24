@@ -12,7 +12,7 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: test       # 👈 environment name (case-sensitive)
+    environment: test   # environment where your secrets live
 
     steps:
       - uses: actions/checkout@v4
@@ -23,22 +23,26 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          azcliversion: 2.63.0   # ensures native .bicepparam support
 
-      - name: Check Azure context
+      - name: Azure CLI version
+        run: |
+          az version
+          az bicep version
+
+      - name: Who am I
         run: az account show
 
-      - name: Validate Bicep
+      - name: Validate Bicep (params file)
         run: |
           az deployment group validate \
             -g rg2 \
-            --template-file main.bicep \
             --parameters @params/main.test.bicepparam \
-                         sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD }}'
+            sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD }}'
 
       - name: Deploy
         run: |
           az deployment group create \
             -g rg2 \
-            --template-file main.bicep \
             --parameters @params/main.test.bicepparam \
-                         sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD }}'
+            sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD }}'
