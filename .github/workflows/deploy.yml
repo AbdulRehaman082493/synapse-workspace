@@ -8,21 +8,13 @@ on:
 permissions:
   id-token: write
   contents: read
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: test   # REQUIRED if your AZURE_* secrets are environment-scoped
+    environment: test
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Echo GitHub context (sanitized)
-        run: |
-          echo "ref=${GITHUB_REF}"
-          echo "workflow_ref=${GITHUB_WORKFLOW_REF}"
-          echo "env=${{ job.environment.name || 'NONE' }}"
-        shell: bash
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
@@ -31,30 +23,23 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Check Azure & Bicep versions
+      - name: Build params to JSON
         run: |
-          az version
-          az bicep version
+          az bicep build-params --file params/main.test.bicepparam --outfile /tmp/params.test.json
+          head -n 30 /tmp/params.test.json
 
-      - name: Who am I
-        run: az account show
-
-      - name: Dry-run parse of .bicepparam
-        run: |
-          head -n 5 params/main.test.bicepparam || true
-          az bicep build-params --file params/main.test.bicepparam --outfile /tmp/test.parameters.json
-          head -n 30 /tmp/test.parameters.json
-
-      - name: Validate Bicep (params file)
+      - name: Validate Bicep
         run: |
           az deployment group validate \
             -g rg2 \
-            --parameters @params/main.test.bicepparam \
-            sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD }}'
+            --template-file main.bicep \
+            --parameters @/tmp/params.test.json \
+                         sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD }}'
 
       - name: Deploy
         run: |
           az deployment group create \
             -g rg2 \
-            --parameters @params/main.test.bicepparam \
-            sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD }}'
+            --template-file main.bicep \
+            --parameters @/tmp/params.test.json \
+                         sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD }}'
